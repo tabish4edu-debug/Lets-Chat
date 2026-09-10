@@ -1,0 +1,7 @@
+{
+  "name": "Lets Chat",
+  "description": "A real-time token-based chat application featuring two-stage pairing (permanent codes and temporary tokens), countdown-timed introductions, real-time messaging, replies, deletions, and ephemeral private mode.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

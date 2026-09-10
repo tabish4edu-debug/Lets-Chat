@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Lets Chat</title>
+  <meta name="description" content="A real-time token-based chat application featuring two-stage pairing (permanent codes and temporary tokens), countdown-timed introductions, real-time messaging, replies, deletions, and ephemeral private mode." />
+  <meta property="og:title" content="Lets Chat" />
+  <meta property="og:description" content="A real-time token-based chat application featuring two-stage pairing without accounts, passwords, or emails." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="alternate icon" href="/favicon.svg" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="app-container" class="app-layout">
+    
+    <!-- Left Sidebar / Drawer -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="app-brand">
+          <div class="brand-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="brand-title">Lets Chat</h1>
+            <span class="brand-subtitle">Two-Stage Anonymous Real-Time</span>
+          </div>
+        </div>
+        <div class="sidebar-header-actions">
+          <button id="open-settings-btn" class="icon-btn desktop-collapse-btn" title="Settings & Vault" aria-label="Open Settings">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+          <button id="collapse-sidebar-btn" class="icon-btn desktop-collapse-btn" title="Collapse sidebar (Ctrl+B)" aria-label="Collapse sidebar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+              <path d="M15 15l-3-3 3-3"></path>
+            </svg>
+          </button>
+          <button id="close-sidebar-btn" class="icon-btn mobile-only" title="Close menu" aria-label="Close sidebar">✕</button>
+        </div>
+      </div>
+
+      <div class="sidebar-content">
+        <!-- User Profile / Display Name Card -->
+        <section class="card profile-card" id="profile-card">
+          <div class="card-header-row">
+            <span class="card-tag">YOUR PROFILE</span>
+            <button type="button" id="edit-name-btn" class="text-btn-action" title="Edit your display name">Edit</button>
+          </div>
+          <div class="profile-preview-row" id="profile-preview-row" title="Click to edit name">
+            <div class="user-avatar-badge" id="my-avatar-preview">?</div>
+            <div class="profile-info-block">
+              <div class="profile-name-label">Display Name</div>
+              <div class="profile-name-val" id="my-display-name-text">Anonymous</div>
+            </div>
+            <svg class="profile-edit-hint-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+            </svg>
+          </div>
+          <form id="display-name-form" class="display-name-form hidden" onsubmit="return false;">
+            <div class="input-with-action">
+              <input
+                type="text"
+                id="display-name-input"
+                class="text-input"
+                placeholder="Enter your name (e.g. Alex)"
+                maxlength="24"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button type="submit" id="save-name-btn" class="btn btn-primary btn-sm">
+                Save
+              </button>
+              <button type="button" id="cancel-name-btn" class="btn btn-secondary btn-sm">
+                Cancel
+              </button>
+            </div>
+            <span class="input-tip">Shared with partners in chat &amp; live typing indicator</span>
+          </form>
+        </section>
+
+        <!-- Permanent Code Card -->
+        <section class="card identity-card" id="identity-card">
+          <div class="card-header-row">
+            <span class="card-tag">PERMANENT IDENTITY</span>
+            <span class="status-dot-pulse" id="identity-pulse" title="Identity Active"></span>
+          </div>
+          <h2 class="card-heading">Your Permanent Code</h2>
+          <p class="card-description">
+            Share this address with someone so they can initiate an introduction with you.
+          </p>
+          <div class="code-display-box" id="permanent-code-box">
+            <span class="code-text" id="my-permanent-code">---- - ----</span>
+            <button id="copy-code-btn" class="btn btn-secondary btn-sm" title="Copy code">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span id="copy-btn-label">Copy</span>
+            </button>
+          </div>
+          <div class="identity-footnote">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>Saved in browser. No password or email needed.</span>
+          </div>
+        </section>
+
+        <!-- Connect to Someone Form -->
+        <section class="card connect-card" id="connect-card">
+          <h2 class="card-heading">Connect to Someone</h2>
+          <p class="card-description">Enter a user's permanent code to initiate pairing:</p>
+          <form id="pair-form" class="connect-form" onsubmit="return false;">
+            <div class="input-with-action">
+              <input
+                type="text"
+                id="target-code-input"
+                class="text-input code-input"
+                placeholder="e.g. AX7K-42PQ"
+                maxlength="12"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button type="submit" id="connect-btn" class="btn btn-primary">
+                Connect
+              </button>
+            </div>
+            <div id="pair-error" class="error-banner hidden"></div>
+            <div class="vault-quick-link-row">
+              <button type="button" id="open-vault-from-connect-btn" class="vault-quick-btn" title="Open saved permanent codes vault">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span>Open Secure Code Vault</span>
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Session & Handshake Info Card (visible during active pairing) -->
+        <section class="card session-card hidden" id="session-card">
+          <div class="card-header-row">
+            <span class="card-tag" id="session-card-tag">SESSION CREDENTIALS</span>
+            <span class="connection-badge" id="session-badge">🟡 In Intro</span>
+          </div>
+          <h3 class="card-heading" id="connected-partner-label">Partner: AX7K-42PQ</h3>
+
+          <div class="token-credentials-grid">
+            <div class="token-box">
+              <span class="token-label">Your Temp Token:</span>
+              <span class="token-value" id="my-temp-token">----</span>
+            </div>
+            <div class="token-box">
+              <span class="token-label">Partner Temp Token:</span>
+              <span class="token-value" id="partner-temp-token">----</span>
+            </div>
+          </div>
+
+          <div id="handshake-action-container" class="handshake-action-box">
+            <p class="handshake-hint">Temporary intro verified by server exchange.</p>
+            <button id="manual-handshake-btn" class="btn btn-success btn-sm w-full">
+              🔗 Verify Handshake &amp; Connect Full
+            </button>
+          </div>
+
+          <button id="disconnect-btn" class="btn btn-danger btn-outline btn-sm w-full mt-2">
+            Disconnect Session
+          </button>
+        </section>
+
+        <!-- Architecture info card -->
+        <section class="card info-card">
+          <h3 class="card-heading-sm">How Two-Stage Pairing Works</h3>
+          <ol class="architecture-steps">
+            <li><strong>Stage 1:</strong> Connect with Permanent Code to locate session.</li>
+            <li><strong>Stage 2:</strong> 90-sec Temporary Intro generates disposable tokens.</li>
+            <li><strong>Stage 3:</strong> Verified Handshake launches Full Live Chat.</li>
+            <li><strong>Secret:</strong> Type <code>/private</code> for ephemeral mode.</li>
+          </ol>
+        </section>
+      </div>
+
+      <div class="sidebar-footer">
+        <span class="socket-status" id="socket-status">
+          <span class="status-indicator offline" id="socket-indicator"></span>
+          <span id="socket-status-text">Connecting to server...</span>
+        </span>
+      </div>
+    </aside>
+
+    <!-- Main Chat View Area -->
+    <main class="chat-viewport" id="chat-viewport">
+      
+      <!-- Top Chat Bar -->
+      <header class="chat-header" id="chat-header">
+        <div class="chat-header-left">
+          <button id="toggle-sidebar-btn" class="icon-btn toggle-sidebar-btn" title="Toggle sidebar (Ctrl+B)" aria-label="Toggle sidebar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+              <path d="M14 9l3 3-3 3"></path>
+            </svg>
+          </button>
+          <div class="chat-partner-info">
+            <div class="partner-avatar" id="partner-avatar">?</div>
+            <div>
+              <div class="partner-name-row">
+                <h2 class="partner-name" id="chat-partner-name">Stranger</h2>
+                <span class="partner-code-badge" id="chat-partner-code">AX7K-42PQ</span>
+              </div>
+              <div class="connection-status-row">
+                <span class="status-indicator offline" id="chat-status-indicator"></span>
+                <span class="chat-status-text" id="chat-status-text">⚪ Waiting for connection</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-header-right">
+          <!-- Countdown Timer during Temporary Intro -->
+          <div id="intro-timer-badge" class="intro-timer-badge hidden">
+            <span class="timer-dot"></span>
+            <span class="timer-label">Intro Remaining:</span>
+            <span class="timer-clock" id="intro-countdown">01:30</span>
+          </div>
+
+          <!-- Private Mode Indicator & Leave button -->
+          <div id="private-mode-badge" class="private-mode-badge hidden">
+            <span class="lock-icon">🔒</span>
+            <span class="private-label">PRIVATE MODE</span>
+            <button id="leave-private-btn" class="btn btn-outline-light btn-xs" title="Exit private mode">
+              Leave Private Chat
+            </button>
+          </div>
+
+          <button id="header-settings-btn" class="icon-btn" title="Settings & Vault" aria-label="Open Settings">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+
+          <button id="header-disconnect-btn" class="icon-btn danger-hover hidden" title="End Session">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+              <line x1="12" y1="2" x2="12" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Temporary Introduction Notification Banner -->
+      <div id="intro-banner" class="intro-banner hidden">
+        <div class="intro-banner-content">
+          <span class="banner-icon">🟡</span>
+          <div class="banner-text">
+            <strong>Temporary Introduction Connection Active</strong>
+            <p>You can chat for ~90 seconds to verify each other. Messages in intro are temporary.</p>
+          </div>
+        </div>
+        <button id="intro-handshake-action-btn" class="btn btn-sm btn-primary">
+          Confirm Handshake (Full Connect)
+        </button>
+      </div>
+
+      <!-- Private Mode Banner -->
+      <div id="private-banner" class="private-banner hidden">
+        <div class="private-banner-content">
+          <span class="banner-icon">🔒</span>
+          <div class="banner-text">
+            <strong>Ephemeral Private Mode Active</strong>
+            <p>Messages in this mode are never saved to chat history and vanish when you leave.</p>
+          </div>
+        </div>
+        <button id="leave-private-banner-btn" class="btn btn-sm btn-secondary">
+          Leave Private Mode
+        </button>
+      </div>
+
+      <!-- Chat Messages Container -->
+      <section class="messages-container" id="messages-container">
+        
+        <!-- Welcome Splash when not connected -->
+        <div id="empty-chat-state" class="empty-state">
+          <div class="empty-icon-ring">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <h2 class="empty-title">Welcome to Lets Chat</h2>
+          <p class="empty-desc">
+            No accounts, no phone numbers, no passwords. Connect instantly using permanent codes and temporary verified session handshakes.
+          </p>
+          <div class="empty-callout">
+            <span>Your code:</span>
+            <strong id="empty-code-preview" class="empty-code-text">---- - ----</strong>
+            <button id="empty-copy-btn" class="btn btn-secondary btn-sm">Copy</button>
+          </div>
+          <p class="empty-hint">
+            Give this code to a friend, or ask them for theirs and click <strong>Connect</strong> in the sidebar.
+          </p>
+        </div>
+
+        <!-- Dynamic Message List -->
+        <div id="messages-list" class="messages-list hidden"></div>
+
+        <!-- Typing Indicator Bubble -->
+        <div id="typing-indicator" class="typing-indicator hidden">
+          <span class="typing-name">Stranger</span> is typing
+          <span class="dots">
+            <span>.</span><span>.</span><span>.</span>
+          </span>
+        </div>
+      </section>
+
+      <!-- Reply Preview Bar (above input) -->
+      <div id="reply-preview-bar" class="reply-preview-bar hidden">
+        <div class="reply-preview-content">
+          <span class="reply-tag">Replying to <strong id="reply-author">Stranger</strong></span>
+          <p class="reply-snippet" id="reply-snippet">"..."</p>
+        </div>
+        <button id="cancel-reply-btn" class="icon-btn-sm" title="Cancel reply">✕</button>
+      </div>
+
+      <!-- Chat Composer Input Form -->
+      <footer class="chat-composer-wrapper">
+        <form id="composer-form" class="chat-composer" onsubmit="return false;">
+          
+          <!-- Emoji Picker Toggle Button -->
+          <div class="emoji-picker-container">
+            <button
+              type="button"
+              id="emoji-toggle-btn"
+              class="composer-btn emoji-btn"
+              title="Add emoji"
+              aria-label="Open emoji picker"
+            >
+              😊
+            </button>
+
+            <!-- Built-in Emoji Popup Dropdown -->
+            <div id="emoji-picker-dropdown" class="emoji-picker-dropdown hidden">
+              <div class="emoji-tabs">
+                <button type="button" class="emoji-tab active" data-category="smileys">😀 Faces</button>
+                <button type="button" class="emoji-tab" data-category="gestures">👋 Hands</button>
+                <button type="button" class="emoji-tab" data-category="hearts">❤️ Hearts</button>
+                <button type="button" class="emoji-tab" data-category="animals">🐱 Nature</button>
+                <button type="button" class="emoji-tab" data-category="objects">💡 Objects</button>
+              </div>
+              <div class="emoji-grid" id="emoji-grid"></div>
+            </div>
+          </div>
+
+          <!-- Message Text Input -->
+          <input
+            type="text"
+            id="message-input"
+            class="composer-input"
+            placeholder="Type a message..."
+            autocomplete="off"
+            spellcheck="true"
+            disabled
+          />
+
+          <!-- Send Message Button -->
+          <button
+            type="submit"
+            id="send-btn"
+            class="composer-btn send-btn"
+            title="Send message"
+            aria-label="Send message"
+            disabled
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </form>
+      </footer>
+    </main>
+
+  </div>
+
+  <!-- MODAL: Private Mode Request (Received by partner) -->
+  <div id="private-modal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-icon lock">🔒</div>
+      <h3 class="modal-title">Private Mode Request</h3>
+      <p class="modal-body">
+        <strong id="private-modal-requester">Stranger</strong> wants to switch to Private Mode.
+      </p>
+      <p class="modal-subtext">
+        In Private Mode, messages are ephemeral and will not be saved to conversation history.
+      </p>
+      <div class="modal-actions">
+        <button id="private-decline-btn" class="btn btn-secondary">DECLINE</button>
+        <button id="private-accept-btn" class="btn btn-primary">ACCEPT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Waiting for Private Mode Response (Shown to requester) -->
+  <div id="private-waiting-modal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-icon spinner-icon">⏳</div>
+      <h3 class="modal-title">Private Mode Requested</h3>
+      <p class="modal-body">Waiting for Stranger's response...</p>
+      <div class="modal-actions">
+        <button id="cancel-private-request-btn" class="btn btn-secondary">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Settings & Secure Code Vault -->
+  <div id="settings-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+    <div class="modal-box settings-modal-box">
+      <!-- Header -->
+      <div class="settings-modal-header">
+        <div class="settings-title-group">
+          <div class="settings-title-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="settings-modal-title">Settings</h3>
+            <span class="settings-subtitle">Appearance, Sound &amp; Secure Contacts</span>
+          </div>
+        </div>
+        <button id="close-settings-btn" class="icon-btn close-modal-btn" title="Close settings" aria-label="Close settings">✕</button>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="settings-tabs" role="tablist">
+        <button type="button" id="tab-btn-appearance" class="settings-tab-btn active" role="tab" aria-selected="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <span>Appearance &amp; Sound</span>
+        </button>
+        <button type="button" id="tab-btn-vault" class="settings-tab-btn" role="tab" aria-selected="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>Secure Code Vault</span>
+          <span class="vault-tab-pill" id="vault-tab-status-pill">🔒 Locked</span>
+        </button>
+      </div>
+
+      <!-- Tab 1: Appearance & Sound Content -->
+      <div id="tab-content-appearance" class="settings-tab-panel">
+        <!-- Appearance Mode -->
+        <section class="settings-section">
+          <div class="settings-section-header">
+            <h4 class="settings-section-title">Appearance Mode</h4>
+            <p class="settings-section-desc">Select your preferred color theme for the interface.</p>
+          </div>
+          <div class="theme-options-grid">
+            <button type="button" id="theme-dark-btn" class="theme-card active" data-theme="dark">
+              <div class="theme-card-preview dark-preview">
+                <div class="preview-header"></div>
+                <div class="preview-bubble preview-sent"></div>
+                <div class="preview-bubble preview-recv"></div>
+              </div>
+              <div class="theme-card-info">
+                <span class="theme-title">🌙 Dark Mode</span>
+                <span class="theme-check-icon">✓</span>
+              </div>
+            </button>
+            <button type="button" id="theme-light-btn" class="theme-card" data-theme="light">
+              <div class="theme-card-preview light-preview">
+                <div class="preview-header"></div>
+                <div class="preview-bubble preview-sent"></div>
+                <div class="preview-bubble preview-recv"></div>
+              </div>
+              <div class="theme-card-info">
+                <span class="theme-title">☀️ Light Mode</span>
+                <span class="theme-check-icon">✓</span>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        <!-- Message Sound -->
+        <section class="settings-section">
+          <div class="settings-section-header">
+            <h4 class="settings-section-title">Message Sound</h4>
+            <p class="settings-section-desc">Play an audio notification chime when incoming messages or pairing events occur.</p>
+          </div>
+          <div class="settings-toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-title">Notification Sounds</span>
+              <span class="toggle-subtitle" id="sound-state-label">Sound is enabled</span>
+            </div>
+            <label class="toggle-switch" for="sound-toggle-input">
+              <input type="checkbox" id="sound-toggle-input" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-sound-test-row">
+            <button type="button" id="test-sound-btn" class="btn btn-secondary btn-sm">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              </svg>
+              <span>Test Audio Chime</span>
+            </button>
+            <span class="input-tip">Generated locally with Web Audio synthesizer</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- Tab 2: Secure Code Vault Content -->
+      <div id="tab-content-vault" class="settings-tab-panel hidden">
+        <!-- View 1: Setup Password (when no password created yet) -->
+        <div id="vault-setup-view" class="vault-subview hidden">
+          <div class="vault-hero-badge">
+            <span class="vault-hero-icon">🔐</span>
+            <h4 class="vault-view-title">Setup Secure Vault</h4>
+            <p class="vault-view-desc">
+              Create a master password to protect other users' permanent codes. Your saved contacts are client-side encrypted using AES-GCM and stored safely on your device.
+            </p>
+          </div>
+          <form id="vault-setup-form" class="vault-form" onsubmit="return false;">
+            <div class="form-group password-group">
+              <label for="vault-new-password">Master Password (min 4 chars)</label>
+              <input type="password" id="vault-new-password" class="text-input password-input" placeholder="Create a master password" autocomplete="new-password" />
+              <button type="button" class="password-toggle-btn" aria-label="Toggle password visibility" title="Show password" data-target="vault-new-password">
+                <svg class="eye-icon eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg class="eye-icon eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+            <div class="form-group password-group">
+              <label for="vault-confirm-password">Confirm Password</label>
+              <input type="password" id="vault-confirm-password" class="text-input password-input" placeholder="Re-enter master password" autocomplete="new-password" />
+              <button type="button" class="password-toggle-btn" aria-label="Toggle password visibility" title="Show password" data-target="vault-confirm-password">
+                <svg class="eye-icon eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg class="eye-icon eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+            <div id="vault-setup-error" class="error-banner hidden"></div>
+            <button type="submit" id="vault-init-btn" class="btn btn-primary w-full">
+              Set Password &amp; Open Vault
+            </button>
+          </form>
+        </div>
+
+        <!-- View 2: Locked Screen (password is set, but vault is locked) -->
+        <div id="vault-locked-view" class="vault-subview">
+          <div class="vault-hero-badge">
+            <span class="vault-hero-icon">🔒</span>
+            <h4 class="vault-view-title">Vault is Locked</h4>
+            <p class="vault-view-desc">
+              Enter your master password to access your saved permanent codes and contacts.
+            </p>
+          </div>
+          <form id="vault-unlock-form" class="vault-form" onsubmit="return false;">
+            <div class="form-group password-group">
+              <label for="vault-unlock-password">Master Password</label>
+              <input type="password" id="vault-unlock-password" class="text-input password-input" placeholder="Enter vault password" autocomplete="current-password" />
+              <button type="button" class="password-toggle-btn" aria-label="Toggle password visibility" title="Show password" data-target="vault-unlock-password">
+                <svg class="eye-icon eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg class="eye-icon eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+            <div id="vault-unlock-error" class="error-banner hidden"></div>
+            <button type="submit" id="vault-unlock-btn" class="btn btn-primary w-full">
+              Unlock Vault
+            </button>
+            <div class="vault-reset-row">
+              <button type="button" id="vault-reset-trigger-btn" class="text-btn-action text-muted" title="Reset vault password and erase saved data">
+                Forgot Password? Reset Vault
+              </button>
+            </div>
+          </form>
+
+          <!-- In-App Reset Confirmation Card (bypasses iframe modal restrictions) -->
+          <div id="vault-reset-confirm-card" class="vault-reset-confirm-card hidden" role="region" aria-label="Reset Vault Confirmation">
+            <div class="vault-reset-card-inner">
+              <div class="vault-reset-card-header">
+                <span class="vault-reset-badge-icon" aria-hidden="true">⚠️</span>
+                <div>
+                  <h5 class="vault-reset-card-title">Reset Vault &amp; Master Password?</h5>
+                  <p class="vault-reset-card-desc">
+                    Forgot your master password? Resetting will permanently erase all saved permanent codes and restore the vault to initial setup so you can create a new password.
+                  </p>
+                </div>
+              </div>
+              <div class="vault-reset-card-actions">
+                <button type="button" id="vault-reset-cancel-btn" class="btn btn-secondary btn-sm">
+                  Cancel
+                </button>
+                <button type="button" id="vault-reset-proceed-btn" class="btn btn-danger btn-sm">
+                  Yes, Erase &amp; Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- View 3: Unlocked Screen (view, add, manage contacts) -->
+        <div id="vault-unlocked-view" class="vault-subview hidden">
+          <div class="vault-top-bar">
+            <div class="vault-status-indicator">
+              <span class="status-dot-pulse active"></span>
+              <span class="vault-status-text">Vault Unlocked</span>
+            </div>
+            <div class="vault-top-actions">
+              <button type="button" id="vault-add-toggle-btn" class="btn btn-primary btn-xs">
+                + Add Code
+              </button>
+              <button type="button" id="vault-change-pass-toggle-btn" class="btn btn-secondary btn-xs" title="Change master password">
+                🔑 Password
+              </button>
+              <button type="button" id="vault-lock-btn" class="btn btn-secondary btn-xs" title="Lock vault immediately">
+                🔒 Lock
+              </button>
+            </div>
+          </div>
+
+          <!-- Add / Edit Contact Form (Collapsible) -->
+          <div id="vault-add-form-card" class="vault-form-card hidden">
+            <h5 class="vault-form-heading" id="vault-form-title">Save Other User's Permanent Code</h5>
+            <form id="vault-contact-form" onsubmit="return false;">
+              <input type="hidden" id="vault-contact-edit-id" value="" />
+              <div class="form-group">
+                <label for="vault-contact-name">Contact Name / Label</label>
+                <input type="text" id="vault-contact-name" class="text-input" placeholder="e.g. Alex (Design Lead)" maxlength="32" autocomplete="off" />
+              </div>
+              <div class="form-group">
+                <label for="vault-contact-code">Permanent Code (8 alphanumeric)</label>
+                <input type="text" id="vault-contact-code" class="text-input code-input" placeholder="e.g. AX7K-42PQ" maxlength="12" spellcheck="false" autocomplete="off" />
+              </div>
+              <div class="form-group">
+                <label for="vault-contact-note">Note (Optional)</label>
+                <input type="text" id="vault-contact-note" class="text-input" placeholder="e.g. Work colleague, available evenings" maxlength="64" autocomplete="off" />
+              </div>
+              <div id="vault-form-error" class="error-banner hidden"></div>
+              <div class="vault-form-actions">
+                <button type="button" id="vault-form-cancel-btn" class="btn btn-secondary btn-sm">Cancel</button>
+                <button type="submit" id="vault-form-save-btn" class="btn btn-primary btn-sm">Save to Vault</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Change Password Form (Collapsible) -->
+          <div id="vault-change-pass-card" class="vault-form-card hidden">
+            <h5 class="vault-form-heading">Change Vault Master Password</h5>
+            <form id="vault-change-pass-form" onsubmit="return false;">
+              <div class="form-group password-group">
+                <label for="vault-old-pass">Current Master Password</label>
+                <input type="password" id="vault-old-pass" class="text-input password-input" placeholder="Enter current password" />
+                <button type="button" class="password-toggle-btn" aria-label="Toggle password visibility" title="Show password" data-target="vault-old-pass">
+                  <svg class="eye-icon eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg class="eye-icon eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
+              <div class="form-group password-group">
+                <label for="vault-new-pass-val">New Master Password (min 4 chars)</label>
+                <input type="password" id="vault-new-pass-val" class="text-input password-input" placeholder="Enter new password" />
+                <button type="button" class="password-toggle-btn" aria-label="Toggle password visibility" title="Show password" data-target="vault-new-pass-val">
+                  <svg class="eye-icon eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg class="eye-icon eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
+              <div id="vault-change-pass-error" class="error-banner hidden"></div>
+              <div class="vault-form-actions">
+                <button type="button" id="vault-change-pass-cancel-btn" class="btn btn-secondary btn-sm">Cancel</button>
+                <button type="submit" id="vault-change-pass-save-btn" class="btn btn-primary btn-sm">Update Password</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Search / Filter input -->
+          <div class="vault-search-row">
+            <input type="text" id="vault-search-input" class="text-input text-input-sm" placeholder="Search saved codes or names..." autocomplete="off" />
+          </div>
+
+          <!-- List of Saved Permanent Codes -->
+          <div class="vault-contacts-list" id="vault-contacts-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Toast Notifications Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Client Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
