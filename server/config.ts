@@ -2,8 +2,8 @@
  * Central configuration for Token-Based Real-Time Chat
  */
 export const CONFIG = {
-  // Server port (hardcoded to 3000 in AI Studio sandbox container; respects external PORT on Render)
-  PORT: process.env.PORT && process.env.PORT !== "8080" ? parseInt(process.env.PORT, 10) : 3000,
+  // Server port (defaults to 3000 in local dev; respects external PORT on Render / Cloud hosting)
+  PORT: process.env.PORT ? parseInt(process.env.PORT, 10) : 3000,
 
   // Temporary introduction connection duration in milliseconds (1 - 1.5 min)
   INTRODUCTION_TIMEOUT: 90 * 1000,

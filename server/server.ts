@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import fs from "fs";
 import http from "http";
 import path from "path";
 import { Server } from "socket.io";
@@ -25,8 +26,14 @@ export async function startServer(): Promise<void> {
 
   app.use(express.json());
 
-  // Serve static assets from public/ directory
-  const publicDir = path.join(process.cwd(), "public");
+  // Serve static assets from public/ directory (robust path resolution for Render and local environments)
+  let publicDir = path.join(process.cwd(), "public");
+  if (!fs.existsSync(publicDir)) {
+    publicDir = path.join(__dirname, "../public");
+  }
+  if (!fs.existsSync(publicDir)) {
+    publicDir = path.join(__dirname, "public");
+  }
   app.use(express.static(publicDir));
 
   // Health and config endpoints

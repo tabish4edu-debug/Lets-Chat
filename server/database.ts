@@ -46,20 +46,10 @@ class ChatDatabase {
     const databaseUrl = process.env.DATABASE_URL;
 
     if (!databaseUrl || !databaseUrl.trim()) {
-      if (process.env.NODE_ENV === "production") {
-        const errorMsg =
-          "FATAL: Missing DATABASE_URL environment variable in production.\n" +
-          "PostgreSQL is required for persistent storage.\n" +
-          "Please configure DATABASE_URL in your hosting environment (e.g. Render).";
-        console.error(errorMsg);
-        throw new Error(errorMsg);
-      }
-
       console.warn("\n==================================================================");
       console.warn("[PostgreSQL Database] NOTICE: DATABASE_URL environment variable is not set.");
-      console.warn("For persistent cloud storage on Render, supply DATABASE_URL in your environment.");
-      console.warn("Initializing in-memory PostgreSQL engine (pg-mem) for development/preview.");
-      console.warn("(Zero SQLite used; pure PostgreSQL dialect via pg connection pool adapter)");
+      console.warn("For persistent cloud storage with Neon, configure DATABASE_URL in Render.");
+      console.warn("Initializing in-memory PostgreSQL engine (pg-mem) as fallback.");
       console.warn("==================================================================\n");
 
       try {
