@@ -157,6 +157,109 @@
     }, 4000);
   }
 
+  // In-App Confirmation Modal (web interface dialog)
+  function showConfirmModal({
+    title = "Confirm Action",
+    message = "Are you sure you want to proceed?",
+    subtext = "",
+    icon = "⚠️",
+    iconType = "warning",
+    proceedText = "Confirm",
+    cancelText = "Cancel",
+    isDanger = false
+  } = {}) {
+    return new Promise((resolve) => {
+      const confirmModal = document.getElementById("confirm-modal");
+      const confirmModalIcon = document.getElementById("confirm-modal-icon");
+      const confirmModalTitle = document.getElementById("confirm-modal-title");
+      const confirmModalBody = document.getElementById("confirm-modal-body");
+      const confirmModalSubtext = document.getElementById("confirm-modal-subtext");
+      const proceedBtn = document.getElementById("confirm-modal-proceed-btn");
+      const cancelBtn = document.getElementById("confirm-modal-cancel-btn");
+
+      if (!confirmModal || !proceedBtn || !cancelBtn) {
+        resolve(true);
+        return;
+      }
+
+      if (confirmModalIcon) {
+        confirmModalIcon.textContent = icon;
+        confirmModalIcon.className = `modal-icon ${iconType || "warning"}`;
+      }
+      if (confirmModalTitle) confirmModalTitle.textContent = title;
+      if (confirmModalBody) confirmModalBody.textContent = message;
+
+      if (confirmModalSubtext) {
+        if (subtext) {
+          confirmModalSubtext.textContent = subtext;
+          confirmModalSubtext.classList.remove("hidden");
+        } else {
+          confirmModalSubtext.textContent = "";
+          confirmModalSubtext.classList.add("hidden");
+        }
+      }
+
+      proceedBtn.textContent = proceedText;
+      cancelBtn.textContent = cancelText;
+
+      if (isDanger) {
+        proceedBtn.className = "btn btn-danger";
+      } else {
+        proceedBtn.className = "btn btn-primary";
+      }
+
+      let settled = false;
+
+      function closeWith(result) {
+        if (settled) return;
+        settled = true;
+        confirmModal.classList.add("hidden");
+        proceedBtn.removeEventListener("click", onProceed);
+        cancelBtn.removeEventListener("click", onCancel);
+        confirmModal.removeEventListener("click", onBackdrop);
+        document.removeEventListener("keydown", onKeyDown);
+        resolve(result);
+      }
+
+      function onProceed(e) {
+        if (e) e.preventDefault();
+        closeWith(true);
+      }
+
+      function onCancel(e) {
+        if (e) e.preventDefault();
+        closeWith(false);
+      }
+
+      function onBackdrop(e) {
+        if (e.target === confirmModal) {
+          if (e) e.preventDefault();
+          closeWith(false);
+        }
+      }
+
+      function onKeyDown(e) {
+        if (e.key === "Escape") {
+          closeWith(false);
+        }
+      }
+
+      proceedBtn.addEventListener("click", onProceed);
+      cancelBtn.addEventListener("click", onCancel);
+      confirmModal.addEventListener("click", onBackdrop);
+      document.addEventListener("keydown", onKeyDown);
+
+      confirmModal.classList.remove("hidden");
+      setTimeout(() => {
+        if (isDanger) {
+          cancelBtn.focus();
+        } else {
+          proceedBtn.focus();
+        }
+      }, 50);
+    });
+  }
+
   // Socket.IO Setup
   const socket = io({
     reconnection: true,
@@ -831,8 +934,18 @@
   });
 
   // End Session
-  function requestEndSession() {
-    if (confirm("Are you sure you want to end this connection?")) {
+  async function requestEndSession() {
+    const confirmed = await showConfirmModal({
+      title: "End Connection?",
+      message: "Are you sure you want to end this connection?",
+      subtext: "You will be disconnected from your partner and returned to standby.",
+      icon: "🔌",
+      iconType: "danger",
+      proceedText: "Disconnect",
+      cancelText: "Cancel",
+      isDanger: true
+    });
+    if (confirmed) {
       socket.emit("end-session");
     }
   }
@@ -1128,10 +1241,17 @@
         const refBubble = referencedMsg.querySelector(".msg-text");
         if (refBubble) quoteText = refBubble.textContent;
       }
-      quoteBox.innerHTML = `
-        <span class="quote-sender">Replying to message</span>
-        <span class="quote-snippet">${escapeHtml(quoteText)}</span>
-      `;
+      const quoteSender = document.createElement("span");
+      quoteSender.className = "quote-sender";
+      quoteSender.textContent = "Replying to message";
+
+      const quoteSnippet = document.createElement("span");
+      quoteSnippet.className = "quote-snippet";
+      quoteSnippet.textContent = cleanDisplayMessage(quoteText);
+
+      quoteBox.appendChild(quoteSender);
+      quoteBox.appendChild(quoteSnippet);
+
       quoteBox.addEventListener("click", () => {
         const target = document.getElementById(`msg-${msg.replyTo}`);
         if (target) {
@@ -1146,9 +1266,10 @@
       bubble.appendChild(quoteBox);
     }
 
+    const displayText = cleanDisplayMessage(msg.text);
     const textEl = document.createElement("div");
     textEl.className = "msg-text";
-    textEl.textContent = msg.text;
+    textEl.textContent = displayText;
     bubble.appendChild(textEl);
 
     row.appendChild(bubble);
@@ -1172,7 +1293,7 @@
       replyBtn.title = "Reply";
       replyBtn.innerHTML = "↩";
       replyBtn.addEventListener("click", () => {
-        setReplyTarget(msg.id, msg.text, isSent ? "You" : senderName);
+        setReplyTarget(msg.id, displayText, isSent ? "You" : senderName);
       });
       actions.appendChild(replyBtn);
 
@@ -1182,8 +1303,18 @@
         deleteBtn.className = "msg-action-btn";
         deleteBtn.title = "Delete";
         deleteBtn.innerHTML = "🗑️";
-        deleteBtn.addEventListener("click", () => {
-          if (confirm("Delete this message?")) {
+        deleteBtn.addEventListener("click", async () => {
+          const confirmed = await showConfirmModal({
+            title: "Delete Message?",
+            message: "Do you want to delete this message for both participants?",
+            subtext: "This action cannot be undone.",
+            icon: "🗑️",
+            iconType: "danger",
+            proceedText: "Delete",
+            cancelText: "Cancel",
+            isDanger: true
+          });
+          if (confirmed) {
             socket.emit("delete-message", { messageId: msg.id });
           }
         });
@@ -1239,6 +1370,17 @@
 
   function scrollToBottom() {
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  function cleanDisplayMessage(text) {
+    if (!text || typeof text !== "string") return text || "";
+    // If text contains HTML entity codes from previous versions, decode them back to plain characters
+    if (text.includes("&#") || text.includes("&quot;") || text.includes("&amp;") || text.includes("&lt;") || text.includes("&gt;")) {
+      const txt = document.createElement("textarea");
+      txt.innerHTML = text;
+      return txt.value;
+    }
+    return text;
   }
 
   function formatTime(timestamp) {
@@ -1389,8 +1531,18 @@
   });
 
   // Leaving Private Mode
-  function leavePrivateMode() {
-    if (confirm("Leave Private Mode and return to normal chat?")) {
+  async function leavePrivateMode() {
+    const confirmed = await showConfirmModal({
+      title: "Exit Private Mode?",
+      message: "Do you really want to exit private mode and return to normal chat?",
+      subtext: "Messages sent during ephemeral private mode will be discarded and cannot be recovered.",
+      icon: "🔓",
+      iconType: "warning",
+      proceedText: "Exit Private Mode",
+      cancelText: "Stay in Private Mode",
+      isDanger: false
+    });
+    if (confirmed) {
       socket.emit("leave-private-mode");
     }
   }
@@ -1975,7 +2127,18 @@
         </svg>
       `;
       deleteBtn.addEventListener("click", async () => {
-        if (confirm(`Remove saved code for "${contact.name || formattedCode}"?`)) {
+        const contactName = contact.name || formattedCode;
+        const confirmed = await showConfirmModal({
+          title: "Remove Saved Contact?",
+          message: `Remove saved code for "${contactName}"?`,
+          subtext: "This permanent code will be removed from your encrypted contacts vault.",
+          icon: "🗑️",
+          iconType: "danger",
+          proceedText: "Remove Contact",
+          cancelText: "Cancel",
+          isDanger: true
+        });
+        if (confirmed) {
           vaultState.contacts = vaultState.contacts.filter((c) => c.id !== contact.id);
           await saveVaultContactsToStorage();
           renderVaultContacts(vaultSearchInput ? vaultSearchInput.value.trim() : "");

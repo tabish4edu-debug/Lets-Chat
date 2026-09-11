@@ -437,6 +437,20 @@
     </div>
   </div>
 
+  <!-- MODAL: Custom In-App Confirmation Dialog -->
+  <div id="confirm-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+    <div class="modal-box confirm-modal-box">
+      <div id="confirm-modal-icon" class="modal-icon warning" aria-hidden="true">⚠️</div>
+      <h3 id="confirm-modal-title" class="modal-title">Confirm Action</h3>
+      <p id="confirm-modal-body" class="modal-body"></p>
+      <p id="confirm-modal-subtext" class="modal-subtext"></p>
+      <div class="modal-actions" id="confirm-modal-actions">
+        <button id="confirm-modal-proceed-btn" class="btn btn-primary" type="button">CONFIRM</button>
+        <button id="confirm-modal-cancel-btn" class="btn btn-secondary" type="button">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: Settings & Secure Code Vault -->
   <div id="settings-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
     <div class="modal-box settings-modal-box">

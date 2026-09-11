@@ -1670,6 +1670,21 @@ div#app-container > aside#sidebar > div > section#connect-card > form#pair-form 
   color: var(--accent-indigo-light);
   box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
 }
+.modal-icon.warning {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.28);
+}
+.modal-icon.danger {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fda4af;
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.28);
+}
+.modal-icon.info {
+  background: rgba(59, 130, 246, 0.18);
+  color: #60a5fa;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.28);
+}
 .modal-icon.spinner-icon {
   background: rgba(99, 102, 241, 0.18);
   color: var(--accent-indigo-light);
@@ -1734,6 +1749,34 @@ div#app-container > aside#sidebar > div > section#connect-card > form#pair-form 
 .modal-actions #private-decline-btn:hover {
   background: var(--glass-surface-hover);
   color: #ffffff;
+}
+
+/* In-App Confirmation Modal */
+#confirm-modal {
+  z-index: 350;
+}
+
+.confirm-modal-box {
+  max-width: 440px;
+  padding: 32px 28px;
+}
+
+#confirm-modal-actions .btn {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#confirm-modal-actions .btn-danger {
+  background: #e11d48;
+  border-color: #f43f5e;
+  color: #ffffff;
+  box-shadow: 0 4px 18px rgba(225, 29, 72, 0.4);
+}
+
+#confirm-modal-actions .btn-danger:hover {
+  background: #be123c;
+  box-shadow: 0 6px 22px rgba(225, 29, 72, 0.55);
 }
 
 /* Toast Notifications */

@@ -31,12 +31,8 @@ export function isValidPermanentCode(code?: string | null): boolean {
 }
 
 export function sanitizeText(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  // Strip non-printable control characters while preserving standard whitespace and literal characters
+  return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 }
 
 export type ConnectionState = "OFFLINE" | "WAITING" | "TEMPORARY_INTRO" | "FULLY_CONNECTED";
