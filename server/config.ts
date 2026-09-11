@@ -8,6 +8,9 @@ export const CONFIG = {
   // Temporary introduction connection duration in milliseconds (1 - 1.5 min)
   INTRODUCTION_TIMEOUT: 90 * 1000,
 
+  // Duration to wait for partner to enter code during pairing (2 minutes = 120 seconds)
+  PAIRING_WAIT_TIMEOUT: 120 * 1000,
+
   // Secret command to request private mode in the message input
   PRIVATE_MODE_COMMAND: "/private",
 

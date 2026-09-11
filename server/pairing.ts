@@ -73,6 +73,18 @@ export interface IntroductionSession {
   isCompleting?: boolean;
 }
 
+export interface PendingPairRequest {
+  id: string;
+  requesterSocketId: string;
+  requesterUserId: string;
+  requesterCode: string;
+  requesterDisplayName: string | null;
+  targetCode: string;
+  createdAt: number;
+  expiresAt: number;
+  timer: NodeJS.Timeout | null;
+}
+
 export interface ActiveSession {
   socketId: string;
   userId: string;
@@ -112,6 +124,8 @@ export class PairingManager {
   private introMessages = new Map<string, EphemeralMessage[]>();
   // Ephemeral private messages: pairingKey -> EphemeralMessage[]
   private privateMessages = new Map<string, EphemeralMessage[]>();
+  // Active pending pair requests waiting up to 2 minutes for mutual code: requesterCode -> PendingPairRequest
+  private pendingPairRequests = new Map<string, PendingPairRequest>();
 
   constructor(io: Server) {
     this.io = io;
@@ -198,6 +212,17 @@ export class PairingManager {
     this.sessions.set(socket.id, session);
     this.userToSocket.set(user.id, socket.id);
 
+    // If another user has an active pending pair request waiting for this user's code, notify this user!
+    for (const pending of this.pendingPairRequests.values()) {
+      if (pending.targetCode === user.permanent_code && pending.expiresAt > Date.now()) {
+        socket.emit("incoming-pairing-request", {
+          requesterCode: pending.requesterCode,
+          requesterDisplayName: pending.requesterDisplayName || "Partner",
+          expiresAt: pending.expiresAt
+        });
+      }
+    }
+
     return {
       user: {
         id: user.id,
@@ -275,31 +300,115 @@ export class PairingManager {
       return { success: false, error: "You are already in an active session." };
     }
 
-    // Lookup target in DB
+    // Check if target code user already has an active pending pair request waiting for THIS user's code!
+    const reciprocalRequest = this.pendingPairRequests.get(targetCode);
+    if (reciprocalRequest && reciprocalRequest.targetCode === session.permanentCode) {
+      console.log(`[Pairing] Mutual code match between ${session.permanentCode} and ${targetCode}!`);
+      if (reciprocalRequest.timer) clearTimeout(reciprocalRequest.timer);
+      this.pendingPairRequests.delete(targetCode);
+      this.cancelPendingPairRequest(session.permanentCode, false);
+
+      const targetSession = this.sessions.get(reciprocalRequest.requesterSocketId);
+      if (targetSession && targetSession.state === "WAITING") {
+        this.startTemporaryIntroduction(session, targetSession);
+        return { success: true };
+      }
+    }
+
+    // Check if target user is currently online and in another conversation
     const targetUser = await db.getUserByPermanentCode(targetCode);
-    if (!targetUser) {
-      return { success: false, error: "That code doesn't exist." };
+    const targetSocketId = targetUser ? this.userToSocket.get(targetUser.id) : null;
+    const targetSession = targetSocketId ? this.sessions.get(targetSocketId) : null;
+
+    if (targetSession && (targetSession.state === "TEMPORARY_INTRO" || targetSession.state === "FULLY_CONNECTED")) {
+      return { success: false, error: "That user is currently busy in another active session." };
     }
 
-    // Check if target user is currently online
-    const targetSocketId = this.userToSocket.get(targetUser.id);
-    if (!targetSocketId) {
-      return { success: false, error: "That user is currently offline." };
+    // Clear any previous pending request by this requester
+    this.cancelPendingPairRequest(session.permanentCode, false);
+
+    // Enter 2-minute (120 seconds) pending waiting window
+    const durationMs = CONFIG.PAIRING_WAIT_TIMEOUT;
+    const expiresAt = Date.now() + durationMs;
+    const requestId = "preq_" + crypto.randomUUID();
+
+    const timer = setTimeout(() => {
+      this.handlePairRequestTimeout(session.permanentCode);
+    }, durationMs);
+
+    const pendingReq: PendingPairRequest = {
+      id: requestId,
+      requesterSocketId: session.socketId,
+      requesterUserId: session.userId,
+      requesterCode: session.permanentCode,
+      requesterDisplayName: session.displayName,
+      targetCode: targetCode,
+      createdAt: Date.now(),
+      expiresAt,
+      timer
+    };
+
+    this.pendingPairRequests.set(session.permanentCode, pendingReq);
+
+    // Emit waiting state to requester
+    this.io.to(session.socketId).emit("pairing-waiting", {
+      targetCode,
+      myCode: session.permanentCode,
+      expiresAt,
+      durationMs
+    });
+
+    // If target user is currently online, notify them immediately!
+    if (targetSocketId) {
+      this.io.to(targetSocketId).emit("incoming-pairing-request", {
+        requesterCode: session.permanentCode,
+        requesterDisplayName: session.displayName || "Partner",
+        expiresAt
+      });
     }
 
-    const targetSession = this.sessions.get(targetSocketId);
-    if (!targetSession) {
-      return { success: false, error: "That user is currently offline." };
-    }
-
-    // Check if target user is already busy in another session
-    if (targetSession.state === "TEMPORARY_INTRO" || targetSession.state === "FULLY_CONNECTED") {
-      return { success: false, error: "That user is currently in another session." };
-    }
-
-    // Both users are available: Establish Two-Stage Temporary Introduction
-    this.startTemporaryIntroduction(session, targetSession);
+    console.log(`[Pairing] User ${session.permanentCode} is waiting 2 minutes for ${targetCode}`);
     return { success: true };
+  }
+
+  public cancelPendingPairRequest(requesterCode: string, notify = true): void {
+    const req = this.pendingPairRequests.get(requesterCode);
+    if (!req) return;
+
+    if (req.timer) {
+      clearTimeout(req.timer);
+    }
+    this.pendingPairRequests.delete(requesterCode);
+
+    if (notify) {
+      this.io.to(req.requesterSocketId).emit("pairing-cancelled", {
+        targetCode: req.targetCode
+      });
+    }
+
+    // Also notify target user if online that request was cancelled
+    for (const s of this.sessions.values()) {
+      if (s.permanentCode === req.targetCode) {
+        this.io.to(s.socketId).emit("incoming-pairing-cancelled", {
+          requesterCode: req.requesterCode
+        });
+      }
+    }
+  }
+
+  private handlePairRequestTimeout(requesterCode: string): void {
+    const req = this.pendingPairRequests.get(requesterCode);
+    if (!req) return;
+
+    this.pendingPairRequests.delete(requesterCode);
+
+    this.io.to(req.requesterSocketId).emit("pairing-timeout", {
+      targetCode: req.targetCode,
+      myCode: req.requesterCode,
+      message: "Waiting time expired (2 minutes). The other user did not enter your code in time."
+    });
+
+    console.log(`[Pairing] Pairing request from ${requesterCode} to ${req.targetCode} timed out after 2 minutes.`);
   }
 
   private startTemporaryIntroduction(sessionA: ActiveSession, sessionB: ActiveSession): void {
@@ -1073,6 +1182,8 @@ export class PairingManager {
     if (!session) return;
 
     console.log(`[Pairing] User ${session.permanentCode} disconnected (${socketId})`);
+
+    this.cancelPendingPairRequest(session.permanentCode, false);
 
     // End active pairing and clean up ephemeral state immediately
     if (session.partnerSocketId) {

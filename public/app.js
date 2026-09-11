@@ -274,7 +274,166 @@
     socket.emit("pair-with-permanent-code", { targetCode: raw });
   });
 
+  let waitingPairInterval = null;
+  let incomingPairInterval = null;
+
+  function showPairWaiting(data) {
+    if (waitingPairInterval) {
+      clearInterval(waitingPairInterval);
+      waitingPairInterval = null;
+    }
+
+    const expiresAt = data.expiresAt || (Date.now() + 120000);
+    const targetCode = data.targetCode || "";
+    const myCode = data.myCode || state.permanentCode || "";
+
+    pairError.className = "error-banner is-waiting";
+    pairError.classList.remove("hidden");
+
+    function renderTimer() {
+      const remainingMs = Math.max(0, expiresAt - Date.now());
+      const totalSec = Math.ceil(remainingMs / 1000);
+      const minutes = Math.floor(totalSec / 60);
+      const seconds = totalSec % 60;
+      const formatted = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+      const timerEl = document.getElementById("pair-waiting-timer");
+      if (timerEl) {
+        timerEl.textContent = formatted;
+      }
+
+      if (remainingMs <= 0) {
+        if (waitingPairInterval) {
+          clearInterval(waitingPairInterval);
+          waitingPairInterval = null;
+        }
+      }
+    }
+
+    pairError.innerHTML = `
+      <div class="pair-waiting-header">
+        <div class="pair-waiting-title-row">
+          <div class="pair-waiting-pulse"></div>
+          <span class="pair-waiting-title">Waiting for Partner...</span>
+        </div>
+        <div class="pair-waiting-timer-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span id="pair-waiting-timer">02:00</span>
+        </div>
+      </div>
+      <p class="pair-waiting-desc">
+        Waiting for <strong>${escapeHtml(targetCode)}</strong> to connect and enter your code (2-minute window).
+      </p>
+      <div class="pair-waiting-share-box">
+        <span class="share-label" style="font-size: 0.76rem; color: rgba(224, 231, 255, 0.75);">Your Code:</span>
+        <code class="share-code-val" id="waiting-share-code">${escapeHtml(myCode)}</code>
+        <button type="button" class="btn btn-xs btn-outline-light" id="waiting-copy-code-btn" title="Copy your code to share">
+          Copy
+        </button>
+      </div>
+      <button type="button" id="cancel-waiting-btn" class="btn btn-outline-danger btn-xs" style="margin-top: 4px; width: 100%;">
+        ✕ Cancel Waiting
+      </button>
+    `;
+
+    renderTimer();
+    waitingPairInterval = setInterval(renderTimer, 1000);
+
+    const copyBtn = document.getElementById("waiting-copy-code-btn");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(myCode).then(() => {
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => {
+            if (copyBtn) copyBtn.textContent = "Copy";
+          }, 1500);
+        });
+      });
+    }
+
+    const cancelBtn = document.getElementById("cancel-waiting-btn");
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", () => {
+        socket.emit("cancel-pair-request");
+        hidePairError();
+        showToast("Pairing request cancelled.", "info");
+      });
+    }
+
+    connectBtn.disabled = true;
+    connectBtn.textContent = "Waiting...";
+  }
+
+  function showPairTimeout(data) {
+    if (waitingPairInterval) {
+      clearInterval(waitingPairInterval);
+      waitingPairInterval = null;
+    }
+
+    const myCode = data.myCode || state.permanentCode || "";
+    const targetCode = data.targetCode || "";
+
+    pairError.className = "error-banner is-timeout";
+    pairError.classList.remove("hidden");
+
+    pairError.innerHTML = `
+      <div class="pair-error-header">
+        <svg class="pair-error-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: #fbbf24;">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span class="pair-timeout-title">Waiting Time Expired (2 minutes)</span>
+      </div>
+      <div class="pair-waiting-desc">
+        ${data.message || `Partner ${escapeHtml(targetCode)} did not enter your code in time.`}
+      </div>
+      <div class="pair-error-tip" style="background: rgba(0,0,0,0.3); border-color: rgba(251, 191, 36, 0.3); color: #fef3c7;">
+        💡 <strong>How to pair:</strong> Both users must connect within the 2-minute window. Make sure your partner has opened this app, and share your permanent code with them: <code>${escapeHtml(myCode)}</code>
+      </div>
+      <div class="pair-timeout-actions">
+        <button type="button" id="retry-pairing-btn" class="btn btn-primary btn-xs">Try Again</button>
+        <button type="button" id="copy-timeout-code-btn" class="btn btn-outline-light btn-xs">Copy My Code</button>
+      </div>
+    `;
+
+    const retryBtn = document.getElementById("retry-pairing-btn");
+    if (retryBtn) {
+      retryBtn.addEventListener("click", () => {
+        if (targetCode) {
+          targetCodeInput.value = targetCode;
+          pairForm.dispatchEvent(new Event("submit"));
+        } else {
+          hidePairError();
+        }
+      });
+    }
+
+    const copyBtn = document.getElementById("copy-timeout-code-btn");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(myCode).then(() => {
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => {
+            if (copyBtn) copyBtn.textContent = "Copy My Code";
+          }, 1500);
+        });
+      });
+    }
+
+    connectBtn.disabled = false;
+    connectBtn.textContent = "Connect";
+  }
+
   function showPairError(msg) {
+    if (waitingPairInterval) {
+      clearInterval(waitingPairInterval);
+      waitingPairInterval = null;
+    }
+
     let tipHtml = "";
     const lower = (msg || "").toLowerCase();
     if (lower.includes("own code")) {
@@ -287,6 +446,7 @@
       tipHtml = `<div class="pair-error-tip">💡 <strong>Tip:</strong> Verify the code with your partner or open another window to generate a valid testing code.</div>`;
     }
 
+    pairError.className = "error-banner";
     pairError.innerHTML = `
       <div class="pair-error-header">
         <svg class="pair-error-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -305,9 +465,126 @@
   }
 
   function hidePairError() {
-    pairError.classList.add("hidden");
+    if (waitingPairInterval) {
+      clearInterval(waitingPairInterval);
+      waitingPairInterval = null;
+    }
+    pairError.className = "error-banner hidden";
     pairError.innerHTML = "";
+    connectBtn.disabled = false;
+    connectBtn.textContent = "Connect";
   }
+
+  // Incoming pairing request banner
+  function showIncomingPairRequest(data) {
+    let container = document.getElementById("incoming-pair-container");
+    if (!container) {
+      const connectCard = document.getElementById("connect-card");
+      if (connectCard) {
+        container = document.createElement("div");
+        container.id = "incoming-pair-container";
+        connectCard.insertBefore(container, connectCard.firstChild);
+      }
+    }
+    if (!container) return;
+
+    if (incomingPairInterval) {
+      clearInterval(incomingPairInterval);
+      incomingPairInterval = null;
+    }
+
+    const expiresAt = data.expiresAt || (Date.now() + 120000);
+    const partnerCode = data.requesterCode || "";
+    const partnerName = data.requesterDisplayName || "Partner";
+
+    function updateIncomingCountdown() {
+      const sec = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      const min = Math.floor(sec / 60);
+      const remSec = sec % 60;
+      const formatted = `${String(min).padStart(2, "0")}:${String(remSec).padStart(2, "0")}`;
+      const badge = document.getElementById("incoming-timer-badge");
+      if (badge) badge.textContent = formatted;
+      if (sec <= 0) {
+        hideIncomingPairRequest();
+      }
+    }
+
+    container.innerHTML = `
+      <div class="incoming-pairing-banner">
+        <div class="incoming-pairing-header">
+          <span class="incoming-pairing-title">
+            <span class="status-indicator waiting" style="margin: 0;"></span>
+            Incoming Pairing Request
+          </span>
+          <span class="incoming-pairing-timer" id="incoming-timer-badge">02:00</span>
+        </div>
+        <div class="incoming-pairing-body">
+          <strong>${escapeHtml(partnerName)}</strong> (<code>${escapeHtml(partnerCode)}</code>) is waiting to pair with you!
+        </div>
+        <div class="incoming-pairing-actions">
+          <button type="button" class="btn btn-primary btn-xs" id="accept-incoming-btn">
+            Connect Now
+          </button>
+          <button type="button" class="btn btn-outline-light btn-xs" id="dismiss-incoming-btn">
+            Dismiss
+          </button>
+        </div>
+      </div>
+    `;
+
+    updateIncomingCountdown();
+    incomingPairInterval = setInterval(updateIncomingCountdown, 1000);
+
+    const acceptBtn = document.getElementById("accept-incoming-btn");
+    if (acceptBtn) {
+      acceptBtn.addEventListener("click", () => {
+        targetCodeInput.value = partnerCode;
+        hideIncomingPairRequest();
+        pairForm.dispatchEvent(new Event("submit"));
+      });
+    }
+
+    const dismissBtn = document.getElementById("dismiss-incoming-btn");
+    if (dismissBtn) {
+      dismissBtn.addEventListener("click", () => {
+        hideIncomingPairRequest();
+      });
+    }
+
+    playNotificationChime();
+    showToast(`🔔 Partner ${partnerCode} is waiting to connect with you!`, "info");
+  }
+
+  function hideIncomingPairRequest() {
+    if (incomingPairInterval) {
+      clearInterval(incomingPairInterval);
+      incomingPairInterval = null;
+    }
+    const container = document.getElementById("incoming-pair-container");
+    if (container) {
+      container.innerHTML = "";
+    }
+  }
+
+  socket.on("pairing-waiting", (data) => {
+    showPairWaiting(data);
+  });
+
+  socket.on("pairing-timeout", (data) => {
+    showPairTimeout(data);
+  });
+
+  socket.on("pairing-cancelled", () => {
+    hidePairError();
+  });
+
+  socket.on("incoming-pairing-request", (data) => {
+    showIncomingPairRequest(data);
+  });
+
+  socket.on("incoming-pairing-cancelled", () => {
+    hideIncomingPairRequest();
+  });
 
   socket.on("pairing-failed", (data) => {
     showPairError(data.message || "Pairing failed.");
@@ -315,10 +592,11 @@
 
   // STAGE 1 -> 2: Temporary Introduction Connection Started
   socket.on("introduction-start", (data) => {
+    hidePairError();
+    hideIncomingPairRequest();
     connectBtn.disabled = false;
     connectBtn.textContent = "Connect";
     targetCodeInput.value = "";
-    hidePairError();
 
     state.partnerCode = data.partnerCode;
     state.partnerDisplayName = data.partnerDisplayName || null;

@@ -115,6 +115,18 @@ export async function startServer(): Promise<void> {
       }
     });
 
+    // Cancel pending pairing request
+    socket.on("cancel-pair-request", () => {
+      try {
+        const session = pairing.getSession(socket.id);
+        if (session) {
+          pairing.cancelPendingPairRequest(session.permanentCode);
+        }
+      } catch (err: any) {
+        console.error("[Socket] Cancel pair request error:", err);
+      }
+    });
+
     // Temporary Token Handshake completion
     socket.on("complete-handshake", async (data?: { introductionId?: string; token?: string; partnerToken?: string }) => {
       try {
