@@ -275,7 +275,29 @@
   });
 
   function showPairError(msg) {
-    pairError.textContent = msg;
+    let tipHtml = "";
+    const lower = (msg || "").toLowerCase();
+    if (lower.includes("own code")) {
+      tipHtml = `<div class="pair-error-tip">💡 <strong>Why this happens:</strong> You cannot pair with yourself. To test live chat, open an Incognito window or another browser tab to get a second code, then enter that code here!</div>`;
+    } else if (lower.includes("offline")) {
+      tipHtml = `<div class="pair-error-tip">💡 <strong>Why this happens:</strong> Live pairing requires both users to be online. Make sure your partner has the app open in their browser (or test by opening a second window).</div>`;
+    } else if (lower.includes("format")) {
+      tipHtml = `<div class="pair-error-tip">💡 <strong>Format:</strong> Codes must be 8 alphanumeric characters formatted like <code>XXXX-XXXX</code> (e.g. <code>AX7K-42PQ</code>).</div>`;
+    } else if (lower.includes("exist")) {
+      tipHtml = `<div class="pair-error-tip">💡 <strong>Tip:</strong> Verify the code with your partner or open another window to generate a valid testing code.</div>`;
+    }
+
+    pairError.innerHTML = `
+      <div class="pair-error-header">
+        <svg class="pair-error-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span class="pair-error-message">${msg}</span>
+      </div>
+      ${tipHtml}
+    `;
     pairError.classList.remove("hidden");
     showToast(msg, "error");
     connectBtn.disabled = false;
@@ -284,7 +306,7 @@
 
   function hidePairError() {
     pairError.classList.add("hidden");
-    pairError.textContent = "";
+    pairError.innerHTML = "";
   }
 
   socket.on("pairing-failed", (data) => {
