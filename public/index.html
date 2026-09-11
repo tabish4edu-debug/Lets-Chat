@@ -189,8 +189,8 @@
           <ol class="architecture-steps">
             <li><strong>Stage 1:</strong> Connect with Permanent Code to locate session.</li>
             <li><strong>Stage 2:</strong> 90-sec Temporary Intro generates disposable tokens.</li>
-            <li><strong>Stage 3:</strong> Verified Handshake launches Full Live Chat.</li>
-            <li><strong>Secret:</strong> Type <code>/private</code> for ephemeral mode.</li>
+            <li><strong>Stage 3:</strong> Both click Handshake to launch Full Live Chat.</li>
+            <li><strong>Testing Solo:</strong> Open an Incognito / Private window to pair.</li>
           </ol>
         </section>
       </div>
@@ -267,10 +267,10 @@
       <!-- Temporary Introduction Notification Banner -->
       <div id="intro-banner" class="intro-banner hidden">
         <div class="intro-banner-content">
-          <span class="banner-icon">🟡</span>
+          <span class="banner-icon" id="intro-banner-icon">🟡</span>
           <div class="banner-text">
-            <strong>Temporary Introduction Connection Active</strong>
-            <p>You can chat for ~90 seconds to verify each other. Messages in intro are temporary.</p>
+            <strong id="intro-banner-title">Temporary Introduction Connection Active</strong>
+            <p id="intro-banner-desc">Chat for ~90s to verify each other. Both users must click Confirm Handshake to connect permanently.</p>
           </div>
         </div>
         <button id="intro-handshake-action-btn" class="btn btn-sm btn-primary">

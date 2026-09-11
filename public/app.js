@@ -35,6 +35,8 @@
   const introTimerBadge = document.getElementById("intro-timer-badge");
   const introCountdown = document.getElementById("intro-countdown");
   const introBanner = document.getElementById("intro-banner");
+  const introBannerTitle = document.getElementById("intro-banner-title");
+  const introBannerDesc = document.getElementById("intro-banner-desc");
   const introHandshakeActionBtn = document.getElementById("intro-handshake-action-btn");
 
   const privateModeBadge = document.getElementById("private-mode-badge");
@@ -668,6 +670,7 @@
 
   // Token Exchange Events over Temporary Connection
   socket.on("partner-token-exchanged", (data) => {
+    if (state.connectionState === "FULLY_CONNECTED") return;
     if (data.introductionId === state.introductionId) {
       state.partnerTempToken = data.partnerTemporaryToken;
       state.partnerTokenReceived = true;
@@ -676,8 +679,27 @@
       }
       showToast("Partner credential received over temporary connection!", "info");
 
+      // Update UI to let user know partner is ready to handshake
+      if (!state.handshakeSent) {
+        if (introBannerTitle) introBannerTitle.textContent = "⚡ Partner Confirmed Handshake!";
+        if (introBannerDesc) introBannerDesc.textContent = "Your partner is ready! Click Confirm Handshake below to complete full connection.";
+        if (introHandshakeActionBtn) {
+          introHandshakeActionBtn.textContent = "⚡ Confirm Handshake & Connect Now";
+          introHandshakeActionBtn.classList.add("pulse-ready");
+        }
+        if (manualHandshakeBtn) {
+          manualHandshakeBtn.textContent = "⚡ Partner Ready — Click to Connect Full";
+        }
+      }
+
       // If user had already initiated handshake verification, submit partner token to cross-verify
       if (state.handshakeSent && !state.partnerVerified) {
+        if (introBannerTitle) introBannerTitle.textContent = "Finalizing Handshake...";
+        if (introBannerDesc) introBannerDesc.textContent = "Exchanging tokens with partner to establish full connection...";
+        manualHandshakeBtn.textContent = "Verifying Mutual Credentials...";
+        if (introHandshakeActionBtn) {
+          introHandshakeActionBtn.textContent = "Verifying Mutual Credentials...";
+        }
         socket.emit("complete-handshake", {
           introductionId: state.introductionId,
           token: state.myTempToken,
@@ -688,25 +710,36 @@
   });
 
   socket.on("token-committed", (data) => {
+    if (state.connectionState === "FULLY_CONNECTED") return;
     if (data.partnerTemporaryToken) {
       state.partnerTempToken = data.partnerTemporaryToken;
       state.partnerTokenReceived = true;
       if (partnerTempTokenEl) {
         partnerTempTokenEl.textContent = data.partnerTemporaryToken;
       }
+      if (state.handshakeSent && !state.partnerVerified) {
+        socket.emit("complete-handshake", {
+          introductionId: state.introductionId,
+          token: state.myTempToken,
+          partnerToken: data.partnerTemporaryToken
+        });
+      }
     }
   });
 
   // Partner token successfully verified by server (Stage 2 sub-step)
   socket.on("partner-token-verified", (data) => {
+    if (state.connectionState === "FULLY_CONNECTED") return;
     state.partnerVerified = true;
     manualHandshakeBtn.disabled = true;
-    manualHandshakeBtn.textContent = "Partner Verified — Waiting for Mutual Verification...";
+    manualHandshakeBtn.textContent = "Partner Verified — Waiting for Mutual Confirmation...";
     if (introHandshakeActionBtn) {
       introHandshakeActionBtn.disabled = true;
-      introHandshakeActionBtn.textContent = "Partner Verified — Waiting for Mutual Verification...";
+      introHandshakeActionBtn.textContent = "Partner Verified — Waiting for Mutual Confirmation...";
     }
-    showToast("Partner token verified! Waiting for partner to verify yours...", "info");
+    if (introBannerTitle) introBannerTitle.textContent = "Partner Verified";
+    if (introBannerDesc) introBannerDesc.textContent = "Your verification completed. Waiting for partner's mutual confirmation...";
+    showToast("Partner token verified! Completing full connection...", "info");
   });
 
   // STAGE 2 -> 3: Handshake Confirmation / Full Live Connection
@@ -714,10 +747,20 @@
     if (!state.myTempToken || !state.introductionId) return;
     state.handshakeSent = true;
     manualHandshakeBtn.disabled = true;
-    manualHandshakeBtn.textContent = "Exchanging Credentials...";
     if (introHandshakeActionBtn) {
       introHandshakeActionBtn.disabled = true;
-      introHandshakeActionBtn.textContent = "Exchanging Credentials...";
+    }
+
+    if (state.partnerTempToken) {
+      manualHandshakeBtn.textContent = "Verifying Credentials...";
+      if (introHandshakeActionBtn) introHandshakeActionBtn.textContent = "Verifying Credentials...";
+      if (introBannerTitle) introBannerTitle.textContent = "Verifying Handshake...";
+      if (introBannerDesc) introBannerDesc.textContent = "Matching disposable security tokens with partner...";
+    } else {
+      manualHandshakeBtn.textContent = "⏳ Waiting for Partner to Confirm...";
+      if (introHandshakeActionBtn) introHandshakeActionBtn.textContent = "⏳ Waiting for Partner to Confirm...";
+      if (introBannerTitle) introBannerTitle.textContent = "Handshake Initiated";
+      if (introBannerDesc) introBannerDesc.textContent = "You confirmed! Waiting for partner to also click Confirm Handshake...";
     }
 
     socket.emit("complete-handshake", {
@@ -742,6 +785,7 @@
     if (introHandshakeActionBtn) {
       introHandshakeActionBtn.disabled = false;
       introHandshakeActionBtn.textContent = "🔗 Verify Handshake & Connect Full";
+      introHandshakeActionBtn.classList.remove("pulse-ready");
     }
 
     state.partnerCode = data.partnerCode;
@@ -771,6 +815,9 @@
   });
 
   socket.on("handshake-failed", (data) => {
+    // If already fully connected, ignore trailing failure messages
+    if (state.connectionState === "FULLY_CONNECTED") return;
+
     state.handshakeSent = false;
     state.partnerVerified = false;
     manualHandshakeBtn.disabled = false;
@@ -778,6 +825,7 @@
     if (introHandshakeActionBtn) {
       introHandshakeActionBtn.disabled = false;
       introHandshakeActionBtn.textContent = "🔗 Verify Handshake & Connect Full";
+      introHandshakeActionBtn.classList.remove("pulse-ready");
     }
     showToast(data.message || "Handshake verification failed.", "error");
   });

@@ -550,7 +550,16 @@ export class PairingManager {
     data?: { introductionId?: string; token?: string; partnerToken?: string }
   ): Promise<{ success: boolean; error?: string }> {
     const session = this.sessions.get(socketId);
-    if (!session || session.state !== "TEMPORARY_INTRO" || !session.partnerSocketId || !session.introductionId) {
+    if (!session) {
+      return { success: false, error: "Session not found." };
+    }
+
+    // If session is already promoted to FULLY_CONNECTED, consider handshake complete
+    if (session.state === "FULLY_CONNECTED") {
+      return { success: true };
+    }
+
+    if (session.state !== "TEMPORARY_INTRO" || !session.partnerSocketId || !session.introductionId) {
       return { success: false, error: "No active temporary introduction to verify." };
     }
 
@@ -593,23 +602,29 @@ export class PairingManager {
       }
 
       if (isUserA) {
+        const newlyCommitted = !intro.tokenACommitted;
         intro.tokenACommitted = true;
-        // Relay Token A to User B over the temporary connection
-        this.io.to(intro.socketBId).emit("partner-token-exchanged", {
-          introductionId: intro.id,
-          partnerTemporaryToken: intro.tokenA
-        });
+        // Relay Token A to User B over the temporary connection ONLY once
+        if (newlyCommitted) {
+          this.io.to(intro.socketBId).emit("partner-token-exchanged", {
+            introductionId: intro.id,
+            partnerTemporaryToken: intro.tokenA
+          });
+        }
         this.io.to(intro.socketAId).emit("token-committed", {
           introductionId: intro.id,
           partnerTemporaryToken: intro.tokenBCommitted ? intro.tokenB : null
         });
       } else {
+        const newlyCommitted = !intro.tokenBCommitted;
         intro.tokenBCommitted = true;
-        // Relay Token B to User A over the temporary connection
-        this.io.to(intro.socketAId).emit("partner-token-exchanged", {
-          introductionId: intro.id,
-          partnerTemporaryToken: intro.tokenB
-        });
+        // Relay Token B to User A over the temporary connection ONLY once
+        if (newlyCommitted) {
+          this.io.to(intro.socketAId).emit("partner-token-exchanged", {
+            introductionId: intro.id,
+            partnerTemporaryToken: intro.tokenB
+          });
+        }
         this.io.to(intro.socketBId).emit("token-committed", {
           introductionId: intro.id,
           partnerTemporaryToken: intro.tokenACommitted ? intro.tokenA : null
