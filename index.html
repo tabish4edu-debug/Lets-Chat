@@ -376,7 +376,6 @@
             placeholder="Type a message..."
             autocomplete="off"
             spellcheck="true"
-            disabled
           />
 
           <!-- Send Message Button -->
@@ -386,7 +385,6 @@
             class="composer-btn send-btn"
             title="Send message"
             aria-label="Send message"
-            disabled
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -394,6 +392,15 @@
             </svg>
           </button>
         </form>
+
+        <!-- Helper status bar beneath composer -->
+        <div class="composer-helper-row" id="composer-helper-row">
+          <span class="composer-status-hint" id="composer-status-hint" title="Click to view pairing info">
+            <span class="composer-hint-icon">💬</span>
+            <span id="composer-hint-text">Type a message and press Enter. Connect in sidebar to chat live with a partner.</span>
+          </span>
+          <span class="composer-char-count hidden" id="composer-char-count">0/2000</span>
+        </div>
       </footer>
     </main>
 

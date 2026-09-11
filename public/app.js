@@ -57,6 +57,10 @@
   const composerForm = document.getElementById("composer-form");
   const messageInput = document.getElementById("message-input");
   const sendBtn = document.getElementById("send-btn");
+  const composerHelperRow = document.getElementById("composer-helper-row");
+  const composerStatusHint = document.getElementById("composer-status-hint");
+  const composerHintText = document.getElementById("composer-hint-text");
+  const composerCharCount = document.getElementById("composer-char-count");
 
   const emojiToggleBtn = document.getElementById("emoji-toggle-btn");
   const emojiPickerDropdown = document.getElementById("emoji-picker-dropdown");
@@ -519,8 +523,10 @@
       chatStatusIndicator.className = "status-indicator offline";
       chatStatusText.textContent = "⚪ Offline";
 
-      messageInput.disabled = true;
-      sendBtn.disabled = true;
+      messageInput.disabled = false;
+      sendBtn.disabled = false;
+      messageInput.placeholder = "Type a message... (connecting to server)";
+      if (composerHintText) composerHintText.textContent = "Connecting to server...";
       sessionCard.classList.add("hidden");
       introBanner.classList.add("hidden");
       introTimerBadge.classList.add("hidden");
@@ -532,8 +538,10 @@
       chatStatusIndicator.className = "status-indicator waiting";
       chatStatusText.textContent = "🟡 Waiting for connection";
 
-      messageInput.disabled = true;
-      sendBtn.disabled = true;
+      messageInput.disabled = false;
+      sendBtn.disabled = false;
+      messageInput.placeholder = "Type a message... (connect in sidebar to chat live)";
+      if (composerHintText) composerHintText.textContent = "Enter partner's permanent code in sidebar to connect & chat live.";
       sessionCard.classList.add("hidden");
       introBanner.classList.add("hidden");
       introTimerBadge.classList.add("hidden");
@@ -552,6 +560,8 @@
 
       messageInput.disabled = false;
       sendBtn.disabled = false;
+      messageInput.placeholder = "Type a message in intro...";
+      if (composerHintText) composerHintText.textContent = "🟡 In 90s intro. Confirm handshake above to enable permanent conversation.";
 
       // Show temporary intro indicators
       introTimerBadge.classList.remove("hidden");
@@ -577,6 +587,8 @@
 
       messageInput.disabled = false;
       sendBtn.disabled = false;
+      messageInput.placeholder = "Type a message... (or /private for ephemeral mode)";
+      if (composerHintText) composerHintText.textContent = "🟢 Live encrypted chat active. Type /private for secret ephemeral mode.";
 
       introTimerBadge.classList.add("hidden");
       introBanner.classList.add("hidden");
@@ -594,6 +606,47 @@
 
       messageInput.focus();
     }
+    updateComposerInputState();
+  }
+
+  // Update composer button & character counter state
+  function updateComposerInputState() {
+    const val = messageInput ? messageInput.value || "" : "";
+    if (sendBtn) {
+      if (val.trim().length > 0) {
+        sendBtn.classList.add("has-text");
+      } else {
+        sendBtn.classList.remove("has-text");
+      }
+    }
+
+    if (composerCharCount) {
+      if (val.length > 0) {
+        composerCharCount.classList.remove("hidden");
+        composerCharCount.textContent = `${val.length}/2000`;
+      } else {
+        composerCharCount.classList.add("hidden");
+      }
+    }
+  }
+
+  // Allow clicking the status hint in footer to quickly focus the sidebar connect field
+  if (composerStatusHint) {
+    composerStatusHint.addEventListener("click", () => {
+      if (state.connectionState !== "TEMPORARY_INTRO" && state.connectionState !== "FULLY_CONNECTED") {
+        if (appContainer && appContainer.classList.contains("sidebar-collapsed")) {
+          appContainer.classList.remove("sidebar-collapsed");
+        }
+        if (targetCodeInput) {
+          targetCodeInput.focus();
+          const connectCard = document.getElementById("connect-card");
+          if (connectCard) {
+            connectCard.classList.add("ring-highlight");
+            setTimeout(() => connectCard.classList.remove("ring-highlight"), 1600);
+          }
+        }
+      }
+    });
   }
 
   // Real-Time Messaging Handlers
@@ -602,6 +655,26 @@
     const text = messageInput.value.trim();
     if (!text) return;
 
+    // Check if connected
+    if (state.connectionState !== "TEMPORARY_INTRO" && state.connectionState !== "FULLY_CONNECTED") {
+      showToast("Connect to a partner using their Permanent Code in the sidebar to chat live.", "info");
+
+      // Open sidebar if collapsed
+      if (appContainer && appContainer.classList.contains("sidebar-collapsed")) {
+        appContainer.classList.remove("sidebar-collapsed");
+      }
+      // Focus target code input and flash highlight
+      if (targetCodeInput) {
+        targetCodeInput.focus();
+        const connectCard = document.getElementById("connect-card");
+        if (connectCard) {
+          connectCard.classList.add("ring-highlight");
+          setTimeout(() => connectCard.classList.remove("ring-highlight"), 1600);
+        }
+      }
+      return;
+    }
+
     // Send message to server
     socket.emit("send-message", {
       text,
@@ -609,6 +682,7 @@
     });
 
     messageInput.value = "";
+    updateComposerInputState();
     cancelActiveReply();
 
     // Stop typing notification
@@ -619,8 +693,10 @@
     socket.emit("stopTyping");
   });
 
-  // Typing Indicator Logic
+  // Typing Indicator Logic & Char counter
   messageInput.addEventListener("input", () => {
+    updateComposerInputState();
+
     if (state.connectionState !== "TEMPORARY_INTRO" && state.connectionState !== "FULLY_CONNECTED") {
       return;
     }
